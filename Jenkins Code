@@ -1,0 +1,72 @@
+def call(Map config) {
+    pipeline {
+        agent {
+            kubernetes {
+                label "nft-jmeter-${UUID.randomUUID().toString()}"
+                yamlFile "${config.baseScriptFolder}/JenkinsPodTemplate.yaml"
+            }
+        }
+
+        environment {
+            environmentName = config.environment
+            clusterName     = config.clusterName
+            clusterRegion   = config.clusterRegion
+            projectId       = config.projectId
+            jmeterNamespace = config.jmeterNamespace ?: "ns-kcl-${config.clusterName.split('-')[1]}-pppmsa-jmeter"
+        }
+
+        parameters {
+            string(name: 'NUM_THREADS', defaultValue: '1')
+            string(name: 'NUM_LOOPS', defaultValue: '1')
+            string(name: 'RAMP_UP_TIME', defaultValue: '1')
+            string(name: 'NUM_REPLICA_WORKER', defaultValue: '1')
+            string(name: 'ENDPOINT_LIST', defaultValue: 'BASIC_GET')
+        }
+
+        stages {
+            stage('Init') {
+                steps {
+                    script {
+                        def uuid = UUID.randomUUID().toString().split('-')[0]
+                        env.UNIQUE_ID = uuid
+                    }
+                }
+            }
+
+            stage('Bake Test Plan') {
+                steps {
+                    container('infra-tools') {
+                        sh "echo Bake Test Plan logic here..."
+                    }
+                }
+            }
+
+            stage('Deploy Helm Charts') {
+                steps {
+                    container('infra-tools') {
+                        sh "echo Deploy Helm Chart logic here..."
+                    }
+                }
+            }
+
+            stage('Run Load Test') {
+                steps {
+                    container('jmeter-master') {
+                        sh "echo Running JMeter test with ${params.ENDPOINT_LIST}"
+                    }
+                }
+            }
+        }
+
+        post {
+            always {
+                container('infra-tools') {
+                    sh """
+                        gcloud container clusters get-credentials ${clusterName} --region ${clusterRegion} --project ${projectId}
+                        helm uninstall jmeter-executor-pool-${env.UNIQUE_ID} -n ${env.jmeterNamespace}
+                    """
+                }
+            }
+        }
+    }
+}
