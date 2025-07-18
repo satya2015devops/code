@@ -1,0 +1,10 @@
+@Library('tnt01-pppmsa-jenkins-sharedlib') _
+
+nftJMeterSuite([
+  baseScriptFolder: 'nft',
+  environmentOverrideFile: 'nft/overrides/bld.yaml',
+  environment: 'bld',
+  clusterName: 'tnt01-pppmsa-bld-01-kcl-04-euwe2',
+  clusterRegion: 'europe-west2',
+  projectId: 'tnt01-pppmsa-bld-01-71ab'
+])
